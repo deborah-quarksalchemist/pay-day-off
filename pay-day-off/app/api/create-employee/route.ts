@@ -6,8 +6,8 @@ import { createClient } from "@supabase/supabase-js";
 import { Database } from "@/lib/database.types";
 
 const supabaseAdmin = createClient<Database>(
-  "https://sdplubdwpkswrcasnpjn.supabase.co",
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNkcGx1YmR3cGtzd3JjYXNucGpuIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0NzI0MzY5NiwiZXhwIjoyMDYyODE5Njk2fQ.n76NYHdGOHLzXSdC0Em9JJu37b0u6h5qbm5j5U7Cw74"
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
 export async function POST(req: Request) {

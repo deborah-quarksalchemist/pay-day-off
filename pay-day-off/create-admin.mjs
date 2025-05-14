@@ -2,7 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 
 // Reemplaza estos valores con tus credenciales de Supabase
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabaseServiceKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 // Datos del usuario administrador
 const adminEmail = "deborah.sanchez1993@gmail.com";
 const adminPassword = "123456";

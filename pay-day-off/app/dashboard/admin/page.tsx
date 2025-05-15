@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { RefreshCcw } from "lucide-react";
 import Link from "next/link";
 import { PageHeader } from "@/components/layout/page-header";
+import { useEffect } from "react";
 
 export default async function AdminDashboardPage() {
   const supabase = await createClient();
@@ -46,53 +47,67 @@ export default async function AdminDashboardPage() {
     }
 
     // Obtener estadísticas
-    const { data: employeesCount } = await supabase
+    const { count: employeesCount } = await supabase
       .from("employees")
       .select("id", { count: "exact", head: true });
 
-    const { data: pendingRequests } = await supabase
+    const { count: pendingRequests } = await supabase
       .from("pdo_requests")
       .select("id", { count: "exact", head: true })
       .eq("status", "pending");
 
     // Obtener solicitudes pendientes
-    const { data: recentRequests } = await supabase
+    const { data: recentRequests, error: errorRequests } = await supabase
       .from("pdo_requests")
       .select(
         `
-        id,
-        start_date,
-        end_date,
-        days_count,
-        status,
-        employees!inner(id),
-        users!inner(full_name)
-      `
+      id,
+      start_date,
+      end_date,
+      days_count,
+      status,
+      employee_id
+    `
       )
       .eq("status", "pending")
       .order("created_at", { ascending: false })
       .limit(5);
 
+    const { data: prueba } = await supabase
+      .from("vw_pdo_requests_with_user")
+      .select("*")
+      .eq("status", "pending")
+      .limit(5);
+
+    console.log({ errorRequests, recentRequests, prueba });
+
     const formattedRequests =
-      recentRequests?.map((req) => ({
-        id: req.id,
-        employeeName: req.users.full_name,
-        startDate: formatDate(req.start_date),
-        endDate: formatDate(req.end_date),
-        daysCount: req.days_count,
-        status: req.status,
-      })) || [];
+      recentRequests?.map((req) => {
+        const matchedUser = prueba?.find(
+          (user) => user.employee_id === req.employee_id
+        );
+
+        return {
+          id: req.id,
+          employeeId: req.employee_id,
+          employeeName: matchedUser?.full_name || "Sin nombre",
+          startDate: formatDate(req.start_date),
+          endDate: formatDate(req.end_date),
+          daysCount: req.days_count,
+          status: req.status,
+        };
+      }) || [];
 
     return (
       <div className="space-y-6">
-        <PageHeader title="Panel de Administración">
+        {/* <PageHeader title="Panel de Administración">
           <Button asChild>
             <Link href="/api/update-pdo">
               <RefreshCcw className="mr-2 h-4 w-4" />
-              Actualizar PDO
+              Actualizar PTO
             </Link>
           </Button>
-        </PageHeader>
+        </PageHeader> */}
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           <Card>
@@ -102,9 +117,7 @@ export default async function AdminDashboardPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
-                {employeesCount?.count || 0}
-              </div>
+              <div className="text-2xl font-bold">{employeesCount || 0}</div>
             </CardContent>
           </Card>
 
@@ -115,9 +128,7 @@ export default async function AdminDashboardPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
-                {pendingRequests?.count || 0}
-              </div>
+              <div className="text-2xl font-bold">{pendingRequests || 0}</div>
             </CardContent>
           </Card>
 

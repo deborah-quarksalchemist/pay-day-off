@@ -13,6 +13,7 @@ const supabaseAdmin = createClient<Database>(
 export async function POST(req: Request) {
   const body = await req.json();
   const { email, password, fullName, department, position, hireDate } = body;
+  console.log(body);
 
   try {
     const { data: authData, error: authError } =
@@ -40,6 +41,7 @@ export async function POST(req: Request) {
       .from("employees")
       .insert({
         id: userId,
+        user_id: userId,
         department,
         position,
         hire_date: hireDate,

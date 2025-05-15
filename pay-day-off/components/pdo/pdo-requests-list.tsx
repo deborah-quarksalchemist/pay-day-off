@@ -42,6 +42,7 @@ interface PdoRequestsListProps {
 }
 
 export function PdoRequestsList({ requests, isAdmin }: PdoRequestsListProps) {
+  console.log(requests, "requests");
   const [isLoading, setIsLoading] = useState<Record<string, boolean>>({});
   const router = useRouter();
   const { toast } = useToast();

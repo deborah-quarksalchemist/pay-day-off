@@ -90,7 +90,7 @@ export function EmployeeForm({ employeeId, defaultValues }: EmployeeFormProps) {
             department,
             position,
             hire_date: format(hireDate, "yyyy-MM-dd"),
-            accumulated_pdo: calculatedPDO, // Usar el valor calculado
+            accumulated_pdo: calculatedPDO,
           })
           .eq("id", employeeId);
 
@@ -102,42 +102,27 @@ export function EmployeeForm({ employeeId, defaultValues }: EmployeeFormProps) {
             "Los datos del empleado han sido actualizados exitosamente.",
         });
       } else {
-        // Crear nuevo usuario
-        const { data: authData, error: authError } =
-          await supabase.auth.admin.createUser({
+        // Crear nuevo usuario vía API protegida
+        const response = await fetch("/api/create-employee", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
             email,
             password: password || Math.random().toString(36).slice(-8),
-            email_confirm: true,
-            user_metadata: { full_name: fullName },
-          });
-
-        if (authError) throw authError;
-
-        const userId = authData.user.id;
-
-        // Crear registro en tabla users
-        const { error: userError } = await supabase.from("users").insert({
-          id: userId,
-          email,
-          full_name: fullName,
-          role: "employee",
-        });
-
-        if (userError) throw userError;
-
-        // Crear registro en tabla employees
-        const { error: employeeError } = await supabase
-          .from("employees")
-          .insert({
-            id: userId,
+            fullName,
             department,
             position,
-            hire_date: format(hireDate, "yyyy-MM-dd"),
-            accumulated_pdo: calculatedPDO, // Usar el valor calculado
-            used_pdo: 0,
-          });
+            hireDate: format(hireDate, "yyyy-MM-dd"),
+          }),
+        });
 
-        if (employeeError) throw employeeError;
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result.error || "Error al crear el empleado.");
+        }
 
         toast({
           title: "Empleado creado",
@@ -234,7 +219,7 @@ export function EmployeeForm({ employeeId, defaultValues }: EmployeeFormProps) {
                 </PopoverContent>
               </Popover>
               <p className="text-sm text-muted-foreground mt-2">
-                PDO calculados:{" "}
+                PTO calculados:{" "}
                 <span className="font-medium">{calculatedPDO?.toFixed(1)}</span>{" "}
                 días
               </p>

@@ -30,29 +30,21 @@ export default async function EmployeesPage() {
 
   // Obtener lista de empleados
   const { data: employees } = await supabase
-    .from("employees")
-    .select(
-      `
-      id,
-      hire_date,
-      department,
-      position,
-      accumulated_pdo,
-      used_pdo,
-      users!inner(full_name, email)
-    `
-    )
-    .order("users(full_name)", { ascending: true });
+    .from("vw_employees_with_user")
+    .select("*")
+    .order("full_name", { ascending: true });
+
+  console.log(employees);
 
   const formattedEmployees =
     employees?.map((emp) => ({
       id: emp.id,
-      name: emp.users.full_name,
-      email: emp.users.email,
+      name: emp.full_name || "",
+      email: emp.email || "",
       department: emp.department || "-",
       position: emp.position || "-",
       hireDate: formatDate(emp.hire_date),
-      hireDateRaw: emp.hire_date, // Fecha sin formatear para cálculos
+      hireDateRaw: emp.hire_date,
       pdoBalance: (emp.accumulated_pdo - emp.used_pdo).toFixed(1),
       accumulatedPdo: emp.accumulated_pdo,
       usedPdo: emp.used_pdo,
@@ -60,16 +52,11 @@ export default async function EmployeesPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Gestión de Empleados">
-        <Button asChild>
-          <Link href="/employees/new">
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Agregar Empleado
-          </Link>
-        </Button>
-      </PageHeader>
+      <PageHeader title="Gestión de Empleados"></PageHeader>
 
-      <EmployeesList employees={formattedEmployees} />
+      <EmployeesList
+        employees={JSON.parse(JSON.stringify(formattedEmployees))}
+      />
     </div>
   );
 }

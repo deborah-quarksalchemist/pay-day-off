@@ -64,7 +64,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       success: true,
-      message: `PDO actualizados para ${updates.length} empleados`,
+      message: `PTO actualizados para ${updates.length} empleados`,
       updates,
     });
   } catch (error: any) {

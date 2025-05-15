@@ -6,7 +6,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
-import { Edit, Trash2, RefreshCw } from "lucide-react";
+import { Edit, Trash2, RefreshCw, PlusCircle } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -56,7 +56,7 @@ export function EmployeesList({
   const router = useRouter();
   const { toast } = useToast();
   const supabase = createClient();
-
+  console.log(employees, "employees");
   const handleDelete = async (id: string) => {
     setIsLoading((prev) => ({ ...prev, [id]: true }));
 
@@ -130,13 +130,13 @@ export function EmployeesList({
       setEmployees(updatedEmployees);
 
       toast({
-        title: "PDO actualizados",
-        description: "Los PDO de todos los empleados han sido actualizados.",
+        title: "PTO actualizados",
+        description: "Los PTO de todos los empleados han sido actualizados.",
       });
     } catch (error: any) {
       toast({
-        title: "Error al actualizar PDO",
-        description: error.message || "Ocurrió un error al actualizar los PDO.",
+        title: "Error al actualizar PTO",
+        description: error.message || "Ocurrió un error al actualizar los PTO.",
         variant: "destructive",
       });
     } finally {
@@ -161,11 +161,11 @@ export function EmployeesList({
           onChange={(e) => setSearchTerm(e.target.value)}
           className="max-w-sm"
         />
-        <Button onClick={refreshPDO} disabled={isRefreshing}>
-          <RefreshCw
-            className={`mr-2 h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`}
-          />
-          Actualizar PDO
+        <Button asChild>
+          <Link href="/employees/new">
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Agregar Empleado
+          </Link>
         </Button>
       </div>
 
@@ -185,9 +185,9 @@ export function EmployeesList({
                 <TableHead>Departamento</TableHead>
                 <TableHead>Cargo</TableHead>
                 <TableHead>Fecha Contratación</TableHead>
-                <TableHead>PDO Acumulados</TableHead>
-                <TableHead>PDO Usados</TableHead>
-                <TableHead>Balance PDO</TableHead>
+                <TableHead>PTO Acumulados</TableHead>
+                <TableHead>PTO Usados</TableHead>
+                <TableHead>Balance PTO</TableHead>
                 <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
             </TableHeader>

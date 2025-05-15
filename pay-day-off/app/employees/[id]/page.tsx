@@ -34,19 +34,25 @@ export default async function EditEmployeePage({
   }
 
   // Obtener datos del empleado
-  const { data: employee } = await supabase
+  const { data: employee, error } = await supabase
     .from("employees")
     .select(
       `
-      id,
-      hire_date,
-      department,
-      position,
-      users!inner(full_name, email)
-    `
+    id,
+    hire_date,
+    department,
+    position,
+    users!employees_user_id_fkey(full_name, email)
+  `
     )
     .eq("id", params.id)
     .single();
+
+  if (error) {
+    console.error("Error fetching employee:", error);
+  } else {
+    console.log("Employee data:", employee);
+  }
 
   if (!employee) {
     redirect("/employees");

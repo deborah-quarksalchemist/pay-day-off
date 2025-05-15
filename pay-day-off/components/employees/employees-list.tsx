@@ -56,7 +56,7 @@ export function EmployeesList({
   const router = useRouter();
   const { toast } = useToast();
   const supabase = createClient();
-  console.log(employees, "employees");
+  console.log(employees);
   const handleDelete = async (id: string) => {
     setIsLoading((prev) => ({ ...prev, [id]: true }));
 
@@ -98,55 +98,9 @@ export function EmployeesList({
     }
   };
 
-  const refreshPDO = async () => {
-    setIsRefreshing(true);
-
-    try {
-      // Actualizar PDO para todos los empleados
-      const updatedEmployees = [...employees];
-
-      for (let i = 0; i < updatedEmployees.length; i++) {
-        const emp = updatedEmployees[i];
-        const calculatedPDO = calculateAccumulatedPDO(emp.hireDateRaw);
-
-        // Actualizar en la base de datos
-        const { error } = await supabase
-          .from("employees")
-          .update({ accumulated_pdo: calculatedPDO })
-          .eq("id", emp.id);
-
-        if (error) {
-          throw error;
-        }
-
-        // Actualizar en el estado local
-        updatedEmployees[i] = {
-          ...emp,
-          accumulatedPdo: calculatedPDO,
-          pdoBalance: (calculatedPDO - emp.usedPdo)?.toFixed(1),
-        };
-      }
-
-      setEmployees(updatedEmployees);
-
-      toast({
-        title: "PTO actualizados",
-        description: "Los PTO de todos los empleados han sido actualizados.",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Error al actualizar PTO",
-        description: error.message || "Ocurrió un error al actualizar los PTO.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsRefreshing(false);
-    }
-  };
-
   const filteredEmployees = employees.filter(
     (emp) =>
-      emp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      emp.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       emp.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       emp.department.toLowerCase().includes(searchTerm.toLowerCase()) ||
       emp.position.toLowerCase().includes(searchTerm.toLowerCase())

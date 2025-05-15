@@ -19,7 +19,7 @@ export default async function Home() {
       .select("role")
       .eq("id", session.user.id)
       .single();
-
+    console.log({ session, userData });
     // Si hay un error o no hay datos, redirigir al login
     if (error || !userData) {
       console.error("Error al obtener el rol del usuario:", error);

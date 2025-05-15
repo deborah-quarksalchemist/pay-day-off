@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { isAdmin } from "@/lib/utils";
 import { EmployeeForm } from "@/components/employees/employee-form";
+import { PageHeader } from "@/components/layout/page-header";
 
 export default async function NewEmployeePage() {
   const supabase = await createClient();
@@ -26,7 +27,11 @@ export default async function NewEmployeePage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold">Agregar Nuevo Empleado</h1>
+      <PageHeader
+        title="Agregar Nuevo Empleado"
+        showBackButton={true}
+        backButtonHref="/employees"
+      />
       <EmployeeForm />
     </div>
   );

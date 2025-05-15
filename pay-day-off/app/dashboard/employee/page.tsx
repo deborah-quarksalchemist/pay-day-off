@@ -12,6 +12,7 @@ import { PdoRequestsList } from "@/components/pdo/pdo-requests-list";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { CalendarDays, Clock, PlusCircle } from "lucide-react";
+import { PageHeader } from "@/components/layout/page-header";
 
 export default async function EmployeeDashboardPage() {
   const supabase = await createClient();
@@ -83,15 +84,14 @@ export default async function EmployeeDashboardPage() {
 
     return (
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold">Mi Dashboard</h1>
+        <PageHeader title="Mi Dashboard">
           <Button asChild>
             <Link href="/my-pdo/new">
               <PlusCircle className="mr-2 h-4 w-4" />
               Solicitar días libres
             </Link>
           </Button>
-        </div>
+        </PageHeader>
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           <Card>

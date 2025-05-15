@@ -1,7 +1,7 @@
 import type React from "react";
 import { AppLayout } from "@/components/layout/app-layout";
 
-export default async function DashboardLayout({
+export default async function EmployeesLayout({
   children,
 }: {
   children: React.ReactNode;

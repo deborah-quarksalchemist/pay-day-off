@@ -1,13 +1,20 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import Link from "next/link"
-import { createClient } from "@/lib/supabase/client"
-import { Button } from "@/components/ui/button"
-import { useToast } from "@/components/ui/use-toast"
-import { Edit, Trash2 } from "lucide-react"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { createClient } from "@/lib/supabase/client";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/use-toast";
+import { Edit, Trash2, RefreshCw } from "lucide-react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,87 +25,155 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
-import { Input } from "@/components/ui/input"
+} from "@/components/ui/alert-dialog";
+import { Input } from "@/components/ui/input";
+import { calculateAccumulatedPDO } from "@/lib/utils";
 
 interface Employee {
-  id: string
-  name: string
-  email: string
-  department: string
-  position: string
-  hireDate: string
-  pdoBalance: string
+  id: string;
+  name: string;
+  email: string;
+  department: string;
+  position: string;
+  hireDate: string;
+  hireDateRaw: string; // Fecha sin formatear para cálculos
+  pdoBalance: string;
+  accumulatedPdo: number;
+  usedPdo: number;
 }
 
 interface EmployeesListProps {
-  employees: Employee[]
+  employees: Employee[];
 }
 
-export function EmployeesList({ employees: initialEmployees }: EmployeesListProps) {
-  const [employees, setEmployees] = useState<Employee[]>(initialEmployees)
-  const [searchTerm, setSearchTerm] = useState("")
-  const [isLoading, setIsLoading] = useState<Record<string, boolean>>({})
-  const router = useRouter()
-  const { toast } = useToast()
-  const supabase = createClient()
+export function EmployeesList({
+  employees: initialEmployees,
+}: EmployeesListProps) {
+  const [employees, setEmployees] = useState<Employee[]>(initialEmployees);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isLoading, setIsLoading] = useState<Record<string, boolean>>({});
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const router = useRouter();
+  const { toast } = useToast();
+  const supabase = createClient();
 
   const handleDelete = async (id: string) => {
-    setIsLoading((prev) => ({ ...prev, [id]: true }))
+    setIsLoading((prev) => ({ ...prev, [id]: true }));
 
     try {
       // Primero eliminar el registro de empleado
-      const { error: employeeError } = await supabase.from("employees").delete().eq("id", id)
+      const { error: employeeError } = await supabase
+        .from("employees")
+        .delete()
+        .eq("id", id);
 
-      if (employeeError) throw employeeError
+      if (employeeError) throw employeeError;
 
       // Luego eliminar el usuario
-      const { error: userError } = await supabase.from("users").delete().eq("id", id)
+      const { error: userError } = await supabase
+        .from("users")
+        .delete()
+        .eq("id", id);
 
-      if (userError) throw userError
+      if (userError) throw userError;
 
       // Actualizar la lista local
-      setEmployees(employees.filter((emp) => emp.id !== id))
+      setEmployees(employees.filter((emp) => emp.id !== id));
 
       toast({
         title: "Empleado eliminado",
         description: "El empleado ha sido eliminado exitosamente.",
-      })
+      });
 
-      router.refresh()
+      router.refresh();
     } catch (error: any) {
       toast({
         title: "Error al eliminar",
-        description: error.message || "Ocurrió un error al eliminar el empleado.",
+        description:
+          error.message || "Ocurrió un error al eliminar el empleado.",
         variant: "destructive",
-      })
+      });
     } finally {
-      setIsLoading((prev) => ({ ...prev, [id]: false }))
+      setIsLoading((prev) => ({ ...prev, [id]: false }));
     }
-  }
+  };
+
+  const refreshPDO = async () => {
+    setIsRefreshing(true);
+
+    try {
+      // Actualizar PDO para todos los empleados
+      const updatedEmployees = [...employees];
+
+      for (let i = 0; i < updatedEmployees.length; i++) {
+        const emp = updatedEmployees[i];
+        const calculatedPDO = calculateAccumulatedPDO(emp.hireDateRaw);
+
+        // Actualizar en la base de datos
+        const { error } = await supabase
+          .from("employees")
+          .update({ accumulated_pdo: calculatedPDO })
+          .eq("id", emp.id);
+
+        if (error) {
+          throw error;
+        }
+
+        // Actualizar en el estado local
+        updatedEmployees[i] = {
+          ...emp,
+          accumulatedPdo: calculatedPDO,
+          pdoBalance: (calculatedPDO - emp.usedPdo)?.toFixed(1),
+        };
+      }
+
+      setEmployees(updatedEmployees);
+
+      toast({
+        title: "PDO actualizados",
+        description: "Los PDO de todos los empleados han sido actualizados.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error al actualizar PDO",
+        description: error.message || "Ocurrió un error al actualizar los PDO.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   const filteredEmployees = employees.filter(
     (emp) =>
       emp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       emp.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       emp.department.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      emp.position.toLowerCase().includes(searchTerm.toLowerCase()),
-  )
+      emp.position.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center">
+      <div className="flex items-center justify-between">
         <Input
           placeholder="Buscar empleados..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="max-w-sm"
         />
+        <Button onClick={refreshPDO} disabled={isRefreshing}>
+          <RefreshCw
+            className={`mr-2 h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`}
+          />
+          Actualizar PDO
+        </Button>
       </div>
 
       {filteredEmployees.length === 0 ? (
         <p className="text-center py-4 text-muted-foreground">
-          {searchTerm ? "No se encontraron empleados que coincidan con la búsqueda." : "No hay empleados registrados."}
+          {searchTerm
+            ? "No se encontraron empleados que coincidan con la búsqueda."
+            : "No hay empleados registrados."}
         </p>
       ) : (
         <div className="rounded-md border">
@@ -110,6 +185,8 @@ export function EmployeesList({ employees: initialEmployees }: EmployeesListProp
                 <TableHead>Departamento</TableHead>
                 <TableHead>Cargo</TableHead>
                 <TableHead>Fecha Contratación</TableHead>
+                <TableHead>PDO Acumulados</TableHead>
+                <TableHead>PDO Usados</TableHead>
                 <TableHead>Balance PDO</TableHead>
                 <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
@@ -122,7 +199,11 @@ export function EmployeesList({ employees: initialEmployees }: EmployeesListProp
                   <TableCell>{employee.department}</TableCell>
                   <TableCell>{employee.position}</TableCell>
                   <TableCell>{employee.hireDate}</TableCell>
-                  <TableCell>{employee.pdoBalance}</TableCell>
+                  <TableCell>{employee.accumulatedPdo?.toFixed(1)}</TableCell>
+                  <TableCell>{employee.usedPdo?.toFixed(1)}</TableCell>
+                  <TableCell className="font-medium">
+                    {employee.pdoBalance}
+                  </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end space-x-2">
                       <Button variant="outline" size="icon" asChild>
@@ -133,20 +214,31 @@ export function EmployeesList({ employees: initialEmployees }: EmployeesListProp
 
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
-                          <Button variant="outline" size="icon" disabled={isLoading[employee.id]}>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            disabled={isLoading[employee.id]}
+                          >
                             <Trash2 className="h-4 w-4 text-red-500" />
                           </Button>
                         </AlertDialogTrigger>
                         <AlertDialogContent>
                           <AlertDialogHeader>
-                            <AlertDialogTitle>¿Eliminar empleado?</AlertDialogTitle>
+                            <AlertDialogTitle>
+                              ¿Eliminar empleado?
+                            </AlertDialogTitle>
                             <AlertDialogDescription>
-                              Esta acción no se puede deshacer. Se eliminará el empleado y todos sus datos asociados.
+                              Esta acción no se puede deshacer. Se eliminará el
+                              empleado y todos sus datos asociados.
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
                             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => handleDelete(employee.id)}>Eliminar</AlertDialogAction>
+                            <AlertDialogAction
+                              onClick={() => handleDelete(employee.id)}
+                            >
+                              Eliminar
+                            </AlertDialogAction>
                           </AlertDialogFooter>
                         </AlertDialogContent>
                       </AlertDialog>
@@ -159,5 +251,5 @@ export function EmployeesList({ employees: initialEmployees }: EmployeesListProp
         </div>
       )}
     </div>
-  )
+  );
 }

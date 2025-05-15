@@ -2,7 +2,7 @@
 
 import type React from "react";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
+import { cn, calculateAccumulatedPDO } from "@/lib/utils";
 import { CalendarIcon } from "lucide-react";
 
 interface EmployeeFormProps {
@@ -42,107 +42,20 @@ export function EmployeeForm({ employeeId, defaultValues }: EmployeeFormProps) {
   );
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [calculatedPDO, setCalculatedPDO] = useState(0);
   const router = useRouter();
   const { toast } = useToast();
   const supabase = createClient();
 
   const isEditing = !!employeeId;
 
-  // const handleSubmit = async (e: React.FormEvent) => {
-  //   e.preventDefault()
-  //   setIsLoading(true)
-
-  //   if (!hireDate) {
-  //     toast({
-  //       title: "Error",
-  //       description: "La fecha de contratación es obligatoria",
-  //       variant: "destructive",
-  //     })
-  //     setIsLoading(false)
-  //     return
-  //   }
-
-  //   try {
-  //     if (isEditing) {
-  //       // Actualizar usuario existente
-  //       const { error: userError } = await supabase
-  //         .from("users")
-  //         .update({
-  //           full_name: fullName,
-  //           email,
-  //         })
-  //         .eq("id", employeeId)
-
-  //       if (userError) throw userError
-
-  //       const { error: employeeError } = await supabase
-  //         .from("employees")
-  //         .update({
-  //           department,
-  //           position,
-  //           hire_date: format(hireDate, "yyyy-MM-dd"),
-  //         })
-  //         .eq("id", employeeId)
-
-  //       if (employeeError) throw employeeError
-
-  //       toast({
-  //         title: "Empleado actualizado",
-  //         description: "Los datos del empleado han sido actualizados exitosamente.",
-  //       })
-  //     } else {
-  //       // Crear nuevo usuario
-  //       const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-  //         email,
-  //         password: password || Math.random().toString(36).slice(-8),
-  //         email_confirm: true,
-  //         user_metadata: { full_name: fullName },
-  //       })
-
-  //       if (authError) throw authError
-
-  //       const userId = authData.user.id
-
-  //       // Crear registro en tabla users
-  //       const { error: userError } = await supabase.from("users").insert({
-  //         id: userId,
-  //         email,
-  //         full_name: fullName,
-  //         role: "employee",
-  //       })
-
-  //       if (userError) throw userError
-
-  //       // Crear registro en tabla employees
-  //       const { error: employeeError } = await supabase.from("employees").insert({
-  //         id: userId,
-  //         department,
-  //         position,
-  //         hire_date: format(hireDate, "yyyy-MM-dd"),
-  //         accumulated_pdo: 0,
-  //         used_pdo: 0,
-  //       })
-
-  //       if (employeeError) throw employeeError
-
-  //       toast({
-  //         title: "Empleado creado",
-  //         description: "El empleado ha sido creado exitosamente.",
-  //       })
-  //     }
-
-  //     router.push("/employees")
-  //     router.refresh()
-  //   } catch (error: any) {
-  //     toast({
-  //       title: "Error",
-  //       description: error.message || "Ocurrió un error al procesar la solicitud.",
-  //       variant: "destructive",
-  //     })
-  //   } finally {
-  //     setIsLoading(false)
-  //   }
-  // }
+  // Calcular PDO cuando cambia la fecha de contratación
+  useEffect(() => {
+    if (hireDate) {
+      const pdo = calculateAccumulatedPDO(hireDate);
+      setCalculatedPDO(pdo);
+    }
+  }, [hireDate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -160,25 +73,71 @@ export function EmployeeForm({ employeeId, defaultValues }: EmployeeFormProps) {
 
     try {
       if (isEditing) {
-        // lógica de edición (puede quedar como está)
-      } else {
-        const response = await fetch("/api/create-employee", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            fullName,
+        // Actualizar usuario existente
+        const { error: userError } = await supabase
+          .from("users")
+          .update({
+            full_name: fullName,
             email,
-            password,
+          })
+          .eq("id", employeeId);
+
+        if (userError) throw userError;
+
+        const { error: employeeError } = await supabase
+          .from("employees")
+          .update({
             department,
             position,
-            hireDate: format(hireDate, "yyyy-MM-dd"),
-          }),
+            hire_date: format(hireDate, "yyyy-MM-dd"),
+            accumulated_pdo: calculatedPDO, // Usar el valor calculado
+          })
+          .eq("id", employeeId);
+
+        if (employeeError) throw employeeError;
+
+        toast({
+          title: "Empleado actualizado",
+          description:
+            "Los datos del empleado han sido actualizados exitosamente.",
+        });
+      } else {
+        // Crear nuevo usuario
+        const { data: authData, error: authError } =
+          await supabase.auth.admin.createUser({
+            email,
+            password: password || Math.random().toString(36).slice(-8),
+            email_confirm: true,
+            user_metadata: { full_name: fullName },
+          });
+
+        if (authError) throw authError;
+
+        const userId = authData.user.id;
+
+        // Crear registro en tabla users
+        const { error: userError } = await supabase.from("users").insert({
+          id: userId,
+          email,
+          full_name: fullName,
+          role: "employee",
         });
 
-        const data = await response.json();
+        if (userError) throw userError;
 
-        if (!response.ok)
-          throw new Error(data.error || "Error creando empleado");
+        // Crear registro en tabla employees
+        const { error: employeeError } = await supabase
+          .from("employees")
+          .insert({
+            id: userId,
+            department,
+            position,
+            hire_date: format(hireDate, "yyyy-MM-dd"),
+            accumulated_pdo: calculatedPDO, // Usar el valor calculado
+            used_pdo: 0,
+          });
+
+        if (employeeError) throw employeeError;
 
         toast({
           title: "Empleado creado",
@@ -274,6 +233,11 @@ export function EmployeeForm({ employeeId, defaultValues }: EmployeeFormProps) {
                   />
                 </PopoverContent>
               </Popover>
+              <p className="text-sm text-muted-foreground mt-2">
+                PDO calculados:{" "}
+                <span className="font-medium">{calculatedPDO?.toFixed(1)}</span>{" "}
+                días
+              </p>
             </div>
 
             {!isEditing && (

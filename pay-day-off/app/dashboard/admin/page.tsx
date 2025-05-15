@@ -9,6 +9,10 @@ import {
 } from "@/components/ui/card";
 import { formatDate, isAdmin } from "@/lib/utils";
 import { PdoRequestsList } from "@/components/pdo/pdo-requests-list";
+import { Button } from "@/components/ui/button";
+import { RefreshCcw } from "lucide-react";
+import Link from "next/link";
+import { PageHeader } from "@/components/layout/page-header";
 
 export default async function AdminDashboardPage() {
   const supabase = await createClient();
@@ -81,7 +85,14 @@ export default async function AdminDashboardPage() {
 
     return (
       <div className="space-y-6">
-        <h1 className="text-3xl font-bold">Panel de Administración</h1>
+        <PageHeader title="Panel de Administración">
+          <Button asChild>
+            <Link href="/api/update-pdo">
+              <RefreshCcw className="mr-2 h-4 w-4" />
+              Actualizar PDO
+            </Link>
+          </Button>
+        </PageHeader>
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           <Card>

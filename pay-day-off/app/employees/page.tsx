@@ -5,6 +5,7 @@ import { PlusCircle } from "lucide-react";
 import Link from "next/link";
 import { formatDate, isAdmin } from "@/lib/utils";
 import { EmployeesList } from "@/components/employees/employees-list";
+import { PageHeader } from "@/components/layout/page-header";
 
 export default async function EmployeesPage() {
   const supabase = await createClient();
@@ -51,20 +52,22 @@ export default async function EmployeesPage() {
       department: emp.department || "-",
       position: emp.position || "-",
       hireDate: formatDate(emp.hire_date),
+      hireDateRaw: emp.hire_date, // Fecha sin formatear para cálculos
       pdoBalance: (emp.accumulated_pdo - emp.used_pdo).toFixed(1),
+      accumulatedPdo: emp.accumulated_pdo,
+      usedPdo: emp.used_pdo,
     })) || [];
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Gestión de Empleados</h1>
+      <PageHeader title="Gestión de Empleados">
         <Button asChild>
           <Link href="/employees/new">
             <PlusCircle className="mr-2 h-4 w-4" />
             Agregar Empleado
           </Link>
         </Button>
-      </div>
+      </PageHeader>
 
       <EmployeesList employees={formattedEmployees} />
     </div>
